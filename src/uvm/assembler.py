@@ -6,12 +6,13 @@ import re
 import sys
 from collections.abc import Iterable, Sequence
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
+from .encoder import encode
 from .errors import AssemblerError
-from .isa import COMMANDS, Instruction
+from .isa import COMMANDS, MIN_OPERAND, Instruction
 
 HEADER = ["command", "operand"]
-MIN_OPERAND = 0
 DECIMAL = 10
 HEXADECIMAL = 16
 NUMBER = re.compile(r"-?(?:[0-9]+|0[xX][0-9a-fA-F]+)\Z")
@@ -61,22 +62,36 @@ def parse_program(lines: Iterable[str]) -> list[Instruction]:
     return program
 
 
+def _write_program(path: Path, commands: list[bytes]) -> None:
+    stream = NamedTemporaryFile(dir=path.parent, delete=False)
+    temporary = Path(stream.name)
+    try:
+        with stream:
+            stream.writelines(commands)
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    """Разобрать файл и вывести поля команд в режиме проверки."""
+    """Записать программу и вывести число ассемблированных команд."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("src", type=Path, help="исходный CSV-файл")
     parser.add_argument("out", type=Path, help="путь для машинного кода")
-    parser.add_argument("--test", action="store_true", help="вывести поля A, B")
+    parser.add_argument("--test", action="store_true", help="вывести байты")
     args = parser.parse_args(argv)
     try:
         with args.src.open(encoding="utf-8-sig", newline="") as source:
             program = parse_program(source)
+        commands = [encode(instruction) for instruction in program]
+        _write_program(args.out, commands)
     except (AssemblerError, OSError, UnicodeError) as exc:
         print(exc, file=sys.stderr)
         return 1
     if args.test:
-        for instruction in program:
-            print(f"A={instruction.opcode}, B={instruction.operand}")
+        for command in commands:
+            print(", ".join(f"0x{byte:02X}" for byte in command))
+    print(f"Ассемблировано команд: {len(commands)}")
     return 0
 
 

@@ -16,7 +16,11 @@ EXPECTED = [
     Instruction(5, 319),
     Instruction(1, 420),
 ]
-OUTPUT = "A=6, B=123\nA=4, B=44\nA=5, B=319\nA=1, B=420\n"
+MACHINE_CODE = b"\xde\x03\x64\x01\xfd\x09\x00\x21\x0d\x00"
+BYTE_LISTING = (
+    "0xDE, 0x03\n0x64, 0x01\n0xFD, 0x09, 0x00\n0x21, 0x0D, 0x00\n"
+)
+SUMMARY = "Ассемблировано команд: 4\n"
 
 
 def test_specification() -> None:
@@ -73,19 +77,47 @@ def test_cli(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     output = tmp_path / "program.bin"
     args = [str(EXAMPLE), str(output)]
     assert main([*args, "--test"]) == 0
-    assert capsys.readouterr().out == OUTPUT
-    assert not output.exists()
+    assert capsys.readouterr().out == BYTE_LISTING + SUMMARY
+    assert output.read_bytes() == MACHINE_CODE
     output.write_bytes(b"original")
     assert main(args) == 0
-    assert capsys.readouterr().out == ""
-    assert output.read_bytes() == b"original"
+    assert capsys.readouterr().out == SUMMARY
+    assert output.read_bytes() == MACHINE_CODE
 
 
 def test_cli_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Направлять диагностику в stderr даже после верной команды."""
     source = tmp_path / "bad.csv"
     source.write_text("command,operand\nread,5\nneg,-1", encoding="utf-8")
-    assert main([str(source), str(tmp_path / "out.bin"), "--test"]) != 0
+    output = tmp_path / "out.bin"
+    output.write_bytes(b"original")
+    assert main([str(source), str(output), "--test"]) != 0
+    assert output.read_bytes() == b"original"
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err.startswith("Строка 3:")
+
+
+def test_empty_program(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Записать пустой файл при наличии одного заголовка."""
+    source = tmp_path / "empty.csv"
+    source.write_text("command,operand\n", encoding="utf-8")
+    output = tmp_path / "empty.bin"
+    assert main([str(source), str(output)]) == 0
+    assert output.read_bytes() == b""
+    assert capsys.readouterr().out == "Ассемблировано команд: 0\n"
+
+
+def test_output_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Сообщать о сбое записи и убирать временный файл."""
+    target = tmp_path / "directory"
+    target.mkdir()
+    assert main([str(EXAMPLE), str(target), "--test"]) != 0
+    captured = capsys.readouterr()
+    assert captured.err
+    assert captured.out == ""
+    assert list(tmp_path.iterdir()) == [target]

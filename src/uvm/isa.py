@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 OPCODE_BITS = 3
 OPERAND_SHIFT = OPCODE_BITS
+MIN_OPERAND = 0
 
 
 @dataclass(frozen=True)
@@ -20,12 +21,13 @@ class Command:
         return (1 << self.operand_bits) - 1
 
 
-COMMANDS = {
+COMMANDS: dict[str, Command] = {
     "load_const": Command(6, 2, 9),
     "read": Command(4, 2, 7),
     "write": Command(5, 3, 19),
     "neg": Command(1, 3, 19),
 }
+BY_OPCODE = {command.opcode: command for command in COMMANDS.values()}
 
 
 @dataclass(frozen=True)

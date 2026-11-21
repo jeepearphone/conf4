@@ -15,7 +15,8 @@ lint:
 	$(PYTHON) -m ruff check --no-cache .
 
 examples:
-	$(PYTHON) -m uvm.assembler examples/spec_tests.csv result.bin --test
+	$(PYTHON) -c "from pathlib import Path; Path('results').mkdir(exist_ok=True)"
+	$(PYTHON) -m uvm.assembler examples/spec_tests.csv results/spec.bin --test
 
 clean:
 	$(PYTHON) -c "$(CLEAN_CMD)" $(CLEAN_DIRS)
