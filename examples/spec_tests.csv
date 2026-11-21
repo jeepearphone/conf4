@@ -1,0 +1,5 @@
+command,operand
+load_const,123
+read,44
+write,319
+neg,420
