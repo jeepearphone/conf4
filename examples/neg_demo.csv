@@ -1,0 +1,12 @@
+command,operand
+load_const,37
+write,300
+write,303
+load_const,0
+write,304
+neg,300
+write,301
+neg,301
+write,302
+neg,304
+write,303

@@ -1,0 +1,16 @@
+command,operand
+load_const,7
+write,100
+load_const,0
+write,101
+load_const,511
+write,102
+load_const,100
+read,0
+write,200
+load_const,100
+read,1
+write,201
+load_const,100
+read,2
+write,202
