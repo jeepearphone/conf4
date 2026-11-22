@@ -6,11 +6,11 @@ import re
 import sys
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 
 from .encoder import encode
 from .errors import AssemblerError
 from .isa import COMMANDS, MIN_OPERAND, Instruction
+from .output import write_chunks
 
 HEADER = ["command", "operand"]
 DECIMAL = 10
@@ -62,17 +62,6 @@ def parse_program(lines: Iterable[str]) -> list[Instruction]:
     return program
 
 
-def _write_program(path: Path, commands: list[bytes]) -> None:
-    stream = NamedTemporaryFile(dir=path.parent, delete=False)
-    temporary = Path(stream.name)
-    try:
-        with stream:
-            stream.writelines(commands)
-        temporary.replace(path)
-    finally:
-        temporary.unlink(missing_ok=True)
-
-
 def main(argv: Sequence[str] | None = None) -> int:
     """Записать программу и вывести число ассемблированных команд."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -84,7 +73,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         with args.src.open(encoding="utf-8-sig", newline="") as source:
             program = parse_program(source)
         commands = [encode(instruction) for instruction in program]
-        _write_program(args.out, commands)
+        write_chunks(args.out, commands)
     except (AssemblerError, OSError, UnicodeError) as exc:
         print(exc, file=sys.stderr)
         return 1

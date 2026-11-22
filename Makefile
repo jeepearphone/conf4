@@ -17,6 +17,8 @@ lint:
 examples:
 	$(PYTHON) -c "from pathlib import Path; Path('results').mkdir(exist_ok=True)"
 	$(PYTHON) -m uvm.assembler examples/spec_tests.csv results/spec.bin --test
+	$(PYTHON) -m uvm.assembler examples/copy_array.csv results/copy.bin
+	$(PYTHON) -m uvm.interpreter results/copy.bin results/copy.json --range 200:202
 
 clean:
 	$(PYTHON) -c "$(CLEAN_CMD)" $(CLEAN_DIRS)
